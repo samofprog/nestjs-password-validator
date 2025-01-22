@@ -1,7 +1,7 @@
 {
   "name": "@samofprog/nestjs-password-validator",
   "description": "A customizable password validation library for NestJS with support for custom rules, blacklist, and optional password confirmation.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "samuel assemien <sa.assemien@gmail.com>",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
