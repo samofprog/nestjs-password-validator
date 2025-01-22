@@ -1,0 +1,53 @@
+{
+  "name": "@samofprog/nestjs-password-validator",
+  "description": "A customizable password validation library for NestJS with support for custom rules, blacklist, and optional password confirmation.",
+  "version": "1.0.0",
+  "author": "samuel assemien <sa.assemien@gmail.com>",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint 'src/**/*.{js,ts}' --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "local:publish": "yarn build && yalc publish",
+    "online:publish": "yarn build && npm publish --access public"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "keywords": [
+    "nestjs",
+    "password",
+    "validator",
+    "validation",
+    "nestjs-password-validator"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samofprog/nestjs-password-validator.git"
+  },
+  "homepage": "https://github.com/samofprog/nestjs-password-validator#readme",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^15.14.0",
+    "prettier": "3.4.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
+  },
+  "dependencies": {
+    "class-validator": "^0.14.1"
+  }
+}
