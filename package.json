@@ -1,21 +1,32 @@
 {
   "name": "@samofprog/nestjs-password-validator",
   "description": "A customizable password validation library for NestJS with support for custom rules, blacklist, and optional password confirmation.",
-  "version": "1.0.1",
+  "version": "1.1.0-beta.1",
   "author": "samuel assemien <sa.assemien@gmail.com>",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
   "files": [
-    "dist",
-    "README.md"
+    "dist/cjs/**/*",
+    "dist/esm/**/*",
+    "dist/types/**/*"
   ],
   "scripts": {
-    "build": "tsup",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "clean": "rimraf dist",
+    "build": "yarn clean && yarn build:cjs && yarn build:esm",
+    "publish:local": "yarn build && yalc publish",
+    "publish:online": "yarn build && npm publish --access public",
     "lint": "eslint 'src/**/*.{js,ts}' --fix",
-    "format": "prettier --write 'src/**/*.ts'",
-    "local:publish": "yarn build && yalc publish",
-    "online:publish": "yarn build && npm publish --access public"
+    "format": "prettier --write 'src/**/*.ts'"
   },
   "engines": {
     "node": ">=16.0.0",
@@ -43,7 +54,6 @@
     "prettier": "3.4.2",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "tsup": "^8.3.5",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.21.0"
   },
