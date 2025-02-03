@@ -29,7 +29,7 @@ A customizable password validation library for NestJS with support for custom ru
 ## Installation ⚙️
 
 ```bash
-npm install @samofprog/nestjs-password-validato
+npm install @samofprog/nestjs-password-validator
 # or
 yarn add @samofprog/nestjs-password-validator
 ```
@@ -38,10 +38,9 @@ yarn add @samofprog/nestjs-password-validator
 
 ## Usage 📚
 
-### Basic Usage
+### Basic Usage with `@IsPassword`
 
 ```typescript
-
 import { IsPassword } from '@samofprog/nestjs-password-validator';
 
 class CreateUserDto {
@@ -64,11 +63,38 @@ class CreateUserDto {
 }
 ```
 
+### Basic Usage with Individual Decorators
+
+```typescript
+import {
+  PasswordMinLength,
+  PasswordMaxLength,
+  PasswordHasUpperCase,
+  PasswordHasLowerCase,
+  PasswordHasNumbers,
+  PasswordHasSpecialChars,
+  PasswordBlacklist,
+  ConfirmPassword,
+} from '@samofprog/nestjs-password-validator';
+
+class CreateUserDto {
+  @PasswordMinLength({length:8})
+  @PasswordMaxLength({length:15})
+  @PasswordHasUpperCase()
+  @PasswordHasLowerCase()
+  @PasswordHasNumbers()
+  @PasswordHasSpecialChars()
+  @PasswordBlacklist({values:['password', '12345678']})
+  password: string;
+}
+```
+
 ### Confirm Password Example
 
 ```typescript
 class RegisterDto {
-  @IsPassword({ confirmPassword: { enabled: true, compareToProperty: 'confirmPassword' } })
+  @PasswordMinLength(8)
+  @ConfirmPassword({ compareToProperty: 'confirmPassword' })
   password: string;
 
   confirmPassword: string;
@@ -79,16 +105,16 @@ class RegisterDto {
 
 ## Configuration Options ⚡️
 
-| Option              | Type      | Description                                              |
-|---------------------|-----------|----------------------------------------------------------|
-| **minLength**       | `number`  | Minimum password length.                                 |
-| **maxLength**       | `number`  | Maximum password length.                                 |
-| **hasUpperCase**    | `boolean` | Check for at least one uppercase letter.                 |
-| **hasLowerCase**    | `boolean` | Check for at least one lowercase letter.                 |
-| **hasNumbers**      | `boolean` | Check for at least one number.                           |
-| **hasSpecialChars** | `boolean` | Check for at least one special character.                |
-| **blacklist**       | `array`   | Disallow specific blacklisted passwords.                 |
-| **confirmPassword** | `boolean` | Validate that the password matches a confirmation field. |
+| Option                      | Type    | Description                                              |
+|-----------------------------|---------|----------------------------------------------------------|
+| **PasswordMinLength**       | `objet` | Minimum password length.                                 |
+| **PasswordMaxLength**       | `objet` | Maximum password length.                                 |
+| **PasswordHasUpperCase**    | `objet` | Check for at least one uppercase letter.                 |
+| **PasswordHasLowerCase**    | `objet` | Check for at least one lowercase letter.                 |
+| **PasswordHasNumbers**      | `objet` | Check for at least one number.                           |
+| **PasswordHasSpecialChars** | `objet` | Check for at least one special character.                |
+| **PasswordBlacklist**       | `objet` | Disallow specific blacklisted passwords.                 |
+| **ConfirmPassword**         | `objet` | Validate that the password matches a confirmation field. |
 
 ---
 
@@ -107,7 +133,7 @@ class RegisterDto {
 
 ---
 
-
 ## License 📄
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+

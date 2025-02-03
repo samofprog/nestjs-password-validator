@@ -3,12 +3,28 @@ import {
     ValidatorConstraint,
     ValidatorConstraintInterface,
 } from "class-validator";
-import { PasswordValidatorOptions } from "./password-validator-options.interface";
+import {
+    BlacklistRule,
+    ConfirmPasswordRule,
+    HasRule,
+    HasSpecialCharsRule,
+    LengthRule,
+    PasswordValidatorOptions,
+} from "../password-validator-options.interface";
 
 @ValidatorConstraint({ async: true })
 export class PasswordConstraint implements ValidatorConstraintInterface {
-    private errorMessage = "Password is invalid";
-    private readonly defaultSpecialChars = [
+    protected readonly defaultMessages = {
+        blacklist: "Password is blacklisted",
+        hasLowerCase: "Password must have at least one lowercase letter",
+        hasNumbers: "Password must have at least one number",
+        hasSpecialChars: "Password must have at least one special character",
+        hasUpperCase: "Password must have at least one uppercase letter",
+        minLength: "Password is too short",
+        maxLength: "Password is too long",
+        confirmPassword: "Passwords do not match",
+    };
+    protected readonly defaultSpecialChars = [
         "!",
         "@",
         "#",
@@ -20,20 +36,8 @@ export class PasswordConstraint implements ValidatorConstraintInterface {
         "(",
         ")",
     ];
-
-    private readonly defaultBlacklistValues = ["12345678", "password"];
-
-    private readonly defaultMessages = {
-        blacklist: "Password is blacklisted",
-        hasLowerCase: "Password must have at least one lowercase letter",
-        hasNumbers: "Password must have at least one number",
-        hasSpecialChars: "Password must have at least one special character",
-        hasUpperCase: "Password must have at least one uppercase letter",
-        minLength: "Password is too short",
-        maxLength: "Password is too long",
-        confirmPassword: "Passwords do not match",
-    };
-
+    protected readonly defaultBlacklistValues = ["12345678", "password"];
+    private errorMessage = "Password is invalid";
     private readonly defaultOptions = {
         blacklist: {
             enabled: true,
@@ -70,20 +74,28 @@ export class PasswordConstraint implements ValidatorConstraintInterface {
         confirmPassword: {
             enabled: false,
             message: this.defaultMessages.confirmPassword,
+            compareToProperty: "confirmPassword",
         },
     };
 
     // Validate the password based on provided options or defaults
-    validate(value: string, args: ValidationArguments): boolean {
+    validate(
+        value: string,
+        args: ValidationArguments
+    ): Promise<boolean> | boolean {
         const options: PasswordValidatorOptions = this.mergeWithDefaults(
             args.constraints[0] ?? {}
         );
 
         const obj = args.object as Record<string, any>;
-        const confirmPassword = options.confirmPassword?.enabled
-            ? obj[
-                  options.confirmPassword.compareToProperty ?? "confirmPassword"
-              ]
+        if (
+            options?.confirmPassword?.enabled &&
+            !options?.confirmPassword?.compareToProperty
+        ) {
+            throw Error("compareToProperty must be defined");
+        }
+        const confirmPassword = options?.confirmPassword?.enabled
+            ? obj[options?.confirmPassword?.compareToProperty]
             : undefined;
 
         return this.validatePassword(value, confirmPassword, options);
@@ -94,13 +106,73 @@ export class PasswordConstraint implements ValidatorConstraintInterface {
         return this.errorMessage;
     }
 
-    /**
-     * Merge user-provided options with the default options.
-     * Ensures that default messages are used when no custom message is provided.
-     *
-     * @param userOptions The options provided by the user.
-     * @returns Merged options with default values for undefined properties.
-     */
+    checkBlacklist(
+        password: string,
+        options: BlacklistRule | undefined
+    ): boolean {
+        if (options?.enabled) {
+            const blacklist = options.values ?? this.defaultBlacklistValues;
+            if (blacklist.includes(password)) {
+                this.errorMessage = options.message!;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    checkLength(password: string, options: LengthRule | undefined): boolean {
+        if (options?.enabled && password.length < options.length!) {
+            this.errorMessage = options.message!;
+            return false;
+        }
+
+        if (options?.enabled && password.length > options.length!) {
+            this.errorMessage = options.message!;
+            return false;
+        }
+
+        return true;
+    }
+
+    checkRegex(
+        password: string,
+        rule: HasRule | undefined,
+        regex: RegExp
+    ): boolean {
+        if (rule?.enabled && !regex.test(password)) {
+            this.errorMessage = rule.message!;
+            return false;
+        }
+        return true;
+    }
+
+    checkSpecialChars(
+        password: string,
+        options: HasSpecialCharsRule | undefined
+    ): boolean {
+        if (options?.enabled) {
+            const chars = options?.characters ?? this.defaultSpecialChars;
+            const regex = new RegExp(`[${chars.join("")}]`, "g");
+            if (!regex.test(password)) {
+                this.errorMessage = options.message!;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    checkConfirmPassword(
+        password: string,
+        confirmPassword: string | undefined,
+        options: ConfirmPasswordRule | undefined
+    ): boolean {
+        if (options?.enabled && confirmPassword !== password) {
+            this.errorMessage = options.message!;
+            return false;
+        }
+        return true;
+    }
+
     private mergeWithDefaults(
         userOptions: PasswordValidatorOptions
     ): PasswordValidatorOptions {
@@ -180,128 +252,32 @@ export class PasswordConstraint implements ValidatorConstraintInterface {
                 message:
                     userOptions?.confirmPassword?.message ??
                     this.defaultMessages.confirmPassword,
+                compareToProperty:
+                    userOptions?.confirmPassword?.compareToProperty ??
+                    this.defaultOptions.confirmPassword.compareToProperty,
             },
         };
     }
-    /**
-     * Perform all password validations.
-     *
-     * @param password The password to validate.
-     * @param confirmPassword The password confirmation value (if applicable).
-     * @param options The validation options to apply.
-     * @returns True if the password passes all validations; otherwise, false.
-     */
+
     private validatePassword(
         password: string,
         confirmPassword: string | undefined,
         options: PasswordValidatorOptions
     ): boolean {
         const checks = [
-            this.checkBlacklist(password, options),
-            this.checkLength(password, options),
-            this.checkRegex(password, options.hasUpperCase, /[A-Z]/g),
-            this.checkRegex(password, options.hasLowerCase, /[a-z]/g),
-            this.checkRegex(password, options.hasNumbers, /\d/g),
-            this.checkSpecialChars(password, options),
-            this.checkConfirmPassword(password, confirmPassword, options),
+            this.checkBlacklist(password, options?.blacklist),
+            this.checkLength(password, options?.minLength),
+            this.checkRegex(password, options?.hasUpperCase, /[A-Z]/g),
+            this.checkRegex(password, options?.hasLowerCase, /[a-z]/g),
+            this.checkRegex(password, options?.hasNumbers, /\d/g),
+            this.checkSpecialChars(password, options?.hasSpecialChars),
+            this.checkConfirmPassword(
+                password,
+                confirmPassword,
+                options?.confirmPassword
+            ),
         ];
 
-        // Return true only if all validations pass
         return checks.every((result) => result);
-    }
-
-    // Validation functions remain unchanged but include comments for clarity
-
-    /**
-     * Validate if the password is not in the blacklist.
-     */
-    private checkBlacklist(
-        password: string,
-        options: PasswordValidatorOptions
-    ): boolean {
-        if (options.blacklist?.enabled) {
-            const blacklist =
-                options.blacklist.values ?? this.defaultBlacklistValues;
-            if (blacklist.includes(password)) {
-                this.errorMessage = options.blacklist.message!;
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Validate the password length (min and max).
-     */
-    private checkLength(
-        password: string,
-        options: PasswordValidatorOptions
-    ): boolean {
-        if (
-            options.minLength?.enabled &&
-            password.length < options.minLength.length!
-        ) {
-            this.errorMessage = options.minLength.message!;
-            return false;
-        }
-
-        if (
-            options.maxLength?.enabled &&
-            password.length > options.maxLength.length!
-        ) {
-            this.errorMessage = options.maxLength.message!;
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Validate if the password matches a specific regex.
-     */
-    private checkRegex(
-        password: string,
-        rule: { enabled?: boolean; message?: string } | undefined,
-        regex: RegExp
-    ): boolean {
-        if (rule?.enabled && !regex.test(password)) {
-            this.errorMessage = rule.message!;
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Validate if the password contains special characters.
-     */
-    private checkSpecialChars(
-        password: string,
-        options: PasswordValidatorOptions
-    ): boolean {
-        if (options.hasSpecialChars?.enabled) {
-            const chars =
-                options.hasSpecialChars.characters ?? this.defaultSpecialChars;
-            const regex = new RegExp(`[${chars.join("")}]`, "g");
-            if (!regex.test(password)) {
-                this.errorMessage = options.hasSpecialChars.message!;
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Validate if the confirmation password matches the password.
-     */
-    private checkConfirmPassword(
-        password: string,
-        confirmPassword: string | undefined,
-        options: PasswordValidatorOptions
-    ): boolean {
-        if (options.confirmPassword?.enabled && confirmPassword !== password) {
-            this.errorMessage = options.confirmPassword.message!;
-            return false;
-        }
-        return true;
     }
 }
